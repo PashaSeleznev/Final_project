@@ -5,11 +5,12 @@ import random
 import emoji
 from PIL import Image
 
+
 class random_field:
     def __init__(self):
         # Создание пустого поля боя
-        self.empty_square = emoji.emojize(':black_square_button:')
-        self.filled_square = emoji.emojize(':black_large_square:')
+        self.empty_square = '0'
+        self.filled_square = '1'
         self.field_1 = [[self.empty_square for _ in range(-1, 11)] for _ in range(-1, 11)]
         self.field = [[self.empty_square for _ in range(10)] for _ in range(10)]
 
@@ -32,17 +33,24 @@ class random_field:
         if direction == 'вертикальное':
             for i in range(size):
                 if row + i >= len(field) \
-                        or self.field_1[row + i][col] != self.empty_square or self.field_1[row + i - 1][col] != self.empty_square or self.field_1[row + i + 1][col] != self.empty_square \
-                        or self.field_1[row + i][col+ 1] != self.empty_square or self.field_1[row + i - 1][col + 1] != self.empty_square or self.field_1[row + i + 1][col + 1] != self.empty_square\
-                        or self.field_1[row + i + 1][col - 1] != self.empty_square or self.field_1[row + i - 1][col - 1] != self.empty_square\
+                        or self.field_1[row + i][col] != self.empty_square or self.field_1[row + i - 1][
+                    col] != self.empty_square or self.field_1[row + i + 1][col] != self.empty_square \
+                        or self.field_1[row + i][col + 1] != self.empty_square or self.field_1[row + i - 1][
+                    col + 1] != self.empty_square or self.field_1[row + i + 1][col + 1] != self.empty_square \
+                        or self.field_1[row + i + 1][col - 1] != self.empty_square or self.field_1[row + i - 1][
+                    col - 1] != self.empty_square \
                         or self.field_1[row + i][col - 1] != self.empty_square:
                     return False
         elif direction == 'горизонтальное':
             for i in range(size):
-                if col + i >= len(field) or self.field[row][col + i] != self.empty_square or self.field_1[row][col + i -1] != self.empty_square \
-                        or self.field_1[row][col + i + 1] != self.empty_square or self.field_1[row + 1][col+i] != self.empty_square \
-                        or self.field_1[row + 1][col+i-1] != self.empty_square or self.field_1[row + 1][col+i+1] != self.empty_square \
-                        or self.field_1[row - 1][col + i] != self.empty_square or self.field_1[row - 1][col + i + 1] != self.empty_square \
+                if col + i >= len(field) or self.field[row][col + i] != self.empty_square or self.field_1[row][
+                    col + i - 1] != self.empty_square \
+                        or self.field_1[row][col + i + 1] != self.empty_square or self.field_1[row + 1][
+                    col + i] != self.empty_square \
+                        or self.field_1[row + 1][col + i - 1] != self.empty_square or self.field_1[row + 1][
+                    col + i + 1] != self.empty_square \
+                        or self.field_1[row - 1][col + i] != self.empty_square or self.field_1[row - 1][
+                    col + i + 1] != self.empty_square \
                         or self.field_1[row - 1][col + i - 1] != self.empty_square:
                     return False
         return True
@@ -59,6 +67,15 @@ class random_field:
                 self.field_1[row][col + i] = self.filled_square
         return self.field
 
+    def save_field(self):
+        with open("field.txt", "w") as file:
+            for row in self.field:
+                for col in row:
+                    file.write(' '.join(col))
+                file.write('\n')
+
+
+
     # Размещение кораблей на поле
     def place_ships(self):
         for ship, count in self.ships.items():
@@ -71,34 +88,14 @@ class random_field:
                     if self.check_valid_position(self.field, row, col, size, direction):
                         self.field = self.place_ship(self.field, row, col, size, direction)
                         break
+        self.save_field()
         # Вывод поля боя с размещенными кораблями
-        for row in self.field:
-            print(' '.join(row))
-
-            img = Image.new('RGB', (500, 500), color='white')
-            pixels = img.load()
-            scale_factor = 50  # размер стороны клетки
-            black_color = (0, 0, 0)  # цвет черной клетки
-            for i in range(10):
-                for j in range(10):
-                    if self.field[i][j] == self.filled_square:
-                        # координаты левого верхнего пикселя
-                        x = j * scale_factor
-                        y = i * scale_factor
-                        # рисуем квадрат 4х4 пикселя
-                        for k in range(50):
-                            for l in range(50):
-                                # проверяем, не выходим ли за границы изображения
-                                if x + k < 500 and y + l < 500:
-                                    pixels[x + k, y + l] = black_color
-
-            # Сохранение изображения в файл
-            img.save('battleship_board.png')
 
 
 # Здесь мы начинаем создавать нашего телеграм бота
 
 bot = telebot.TeleBot('6214557143:AAF9wrgPduSyDvYCJrmiaizbiahJwbDPem4')
+
 
 @bot.message_handler(commands=['start'])
 def start(message):
@@ -111,7 +108,6 @@ def start(message):
     bot.send_message(message.chat.id, hello_mess, parse_mode='html')
     bot.send_message(message.chat.id, enter_game_mess)
     bot.send_message(message.chat.id, next_point_mess)
-
 
 
 @bot.message_handler(content_types=['text'])
@@ -129,10 +125,23 @@ def get_user_text(message):
     if message.text == 'START':
         our_ship = random_field()
         our_ship.place_ships()
-        photo_field = open('battleship_board.png', 'rb')
+        field_message = ''
         bot.send_message(message.chat.id, 'Мы сгенерировали расстановку твоих кораблей')
-        bot.send_photo(message.chat.id, photo_field)
+        field_message = emoji.emojize(':black_large_square:') + "🄰 🄱 🄲 🄳 🄴 🄵 🄶 🄷 🄸 🄹" + '\n'
+        line_number = 0
+        with open("field.txt", "r") as file:
+            lines = file.readlines()
+            for line in lines:
 
+                line_number += 1
+                field_message +=emoji.emojize(':keycap_'+str(line_number)+':')
+                for i in line:
+                    if i == '0':
+                        field_message += emoji.emojize(':black_large_square:')
+                    elif i == '1':
+                        field_message += emoji.emojize(':black_square_button:')
+                    else:
+                        field_message += i
+        bot.send_message(message.chat.id, field_message)
 
 bot.polling(none_stop=True)
-
