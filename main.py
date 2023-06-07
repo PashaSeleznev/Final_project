@@ -86,8 +86,8 @@ class random_field:
                         x = j * scale_factor
                         y = i * scale_factor
                         # рисуем квадрат 4х4 пикселя
-                        for k in range(32):
-                            for l in range(32):
+                        for k in range(50):
+                            for l in range(50):
                                 # проверяем, не выходим ли за границы изображения
                                 if x + k < 500 and y + l < 500:
                                     pixels[x + k, y + l] = black_color
