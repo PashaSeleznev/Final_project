@@ -127,7 +127,7 @@ def get_user_text(message):
         our_ship.place_ships()
         field_message = ''
         bot.send_message(message.chat.id, 'Мы сгенерировали расстановку твоих кораблей')
-        field_message = emoji.emojize(':black_large_square:') + "🄰 🄱 🄲 🄳 🄴 🄵 🄶 🄷 🄸 🄹" + '\n'
+        field_message = emoji.emojize(':triangular_flag:') + " 🄰  🄱  🄲  🄳  🄴  🄵  🄶  🄷  🄸  🄹" + '\n'
         line_number = 0
         with open("field.txt", "r") as file:
             lines = file.readlines()
@@ -137,9 +137,9 @@ def get_user_text(message):
                 field_message +=emoji.emojize(':keycap_'+str(line_number)+':')
                 for i in line:
                     if i == '0':
-                        field_message += emoji.emojize(':black_large_square:')
+                        field_message += emoji.emojize(':white_large_square:')
                     elif i == '1':
-                        field_message += emoji.emojize(':black_square_button:')
+                        field_message += emoji.emojize(':black_large_square:')
                     else:
                         field_message += i
         bot.send_message(message.chat.id, field_message)
