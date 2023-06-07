@@ -73,6 +73,7 @@ class random_field:
                         break
         # Вывод поля боя с размещенными кораблями
         for row in self.field:
+            print(' '.join(row))
 
             img = Image.new('RGB', (500, 500), color='white')
             pixels = img.load()
