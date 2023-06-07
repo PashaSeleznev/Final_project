@@ -139,7 +139,7 @@ def get_user_text(message):
                     if i == '0':
                         field_message += emoji.emojize(':white_large_square:')
                     elif i == '1':
-                        field_message += emoji.emojize(':black_large_square:')
+                        field_message += emoji.emojize(':passenger_ship:')
                     else:
                         field_message += i
         bot.send_message(message.chat.id, field_message)
