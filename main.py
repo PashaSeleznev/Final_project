@@ -63,7 +63,7 @@ class Field(object):
     def draw_field(self, element):
         reply = ''
         field = self.get_field_part(element)
-        field_message = emoji.emojize(':triangular_flag:') + " 🄰  🄱  🄲  🄳  🄴  🄵  🄶  🄷  🄸  🄹" + '\n'
+        field_message = emoji.emojize(':triangular_flag:') + "  🄰   🄱   🄲   🄳   🄴   🄵   🄶   🄷   🄸   🄹" + '\n'
         for x in range(0, self.size):
             field_message += emoji.emojize(':keycap_' + str(x + 1) + ':')
             for y in range(0, self.size):
