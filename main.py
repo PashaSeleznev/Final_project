@@ -476,12 +476,13 @@ def start(message):
 
     bot.send_message(message.chat.id, hello_mess, parse_mode='html')
     bot.send_message(message.chat.id, enter_game_mess)
+
     markup = types.ReplyKeyboardMarkup()
     Start = types.KeyboardButton('Начать')
-    markup.add(Start)
-    bot.send_message(message.chat.id, 'Для начала игры нажми "Начать"', parse_mode='html',
+    Help = types.KeyboardButton('Помощь')
+    markup.add(Start, Help)
+    bot.send_message(message.chat.id, 'Для начала игры нажми "Начать", а для ознакомления с правилами ввода - "Помощь"', parse_mode='html',
                      reply_markup=markup)
-
 
 @bot.message_handler(content_types=['text'])
 def get_user_text(message):
@@ -505,6 +506,9 @@ def get_user_text(message):
             bot.send_message(message.chat.id, 'Ваш флот\n' + field, parse_mode='html', reply_markup=markup)
             bot.send_message(message.chat.id, 'Радар\n' + radar)
             InputType.input_type = InputTypes.shot
+        elif message.text == 'Помощь':
+            help_mes = 'Когда собираешься ввести координату выстрела, используй следующий формат: A1 (Заглавная английская буква от A до J + число от 1 до 10)'
+            bot.send_message(message.chat.id, help_mes)
 
     elif InputType.input_type == InputTypes.shot:
         user_input = message.text.upper().replace(" ", "")
