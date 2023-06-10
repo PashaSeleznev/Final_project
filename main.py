@@ -485,6 +485,9 @@ def start(message):
 
 @bot.message_handler(content_types=['text'])
 def get_user_text(message):
+    if message.chat.id not in chatVariables.keys():
+        bot.send_message(message.chat.id, "Вас нет в базе данных!\nНажмите /start чтобы исправить")
+        return
     current_game = chatVariables[message.chat.id]
     if InputType.input_type == InputTypes.other:
         if message.text == 'Автоматически':
