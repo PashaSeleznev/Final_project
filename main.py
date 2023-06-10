@@ -14,18 +14,23 @@ class FieldPart(object):
     radar = 'radar'
     weight = 'weight'
 
+
 class InputTypes(object):
     ship_setup = 0
     shot = 1
     other = 2
     waiting = 3
 
+
 class InputType:
     input_type = InputTypes.other
+
     def get_input_type(self):
         return self.input_type
+
     def set_input_type(self, type):
         self.input_type = type
+
 
 class Cell(object):
     empty_cell = emoji.emojize(':water_wave:')
@@ -60,12 +65,13 @@ class Field(object):
         field = self.get_field_part(element)
         field_message = emoji.emojize(':triangular_flag:') + " 🄰  🄱  🄲  🄳  🄴  🄵  🄶  🄷  🄸  🄹" + '\n'
         for x in range(0, self.size):
-            field_message += emoji.emojize(':keycap_' + str(x+1) + ':')
+            field_message += emoji.emojize(':keycap_' + str(x + 1) + ':')
             for y in range(0, self.size):
                 field_message += " " + str(field[x][y])
             field_message += '\n'
         field_message += '\n'
         return field_message
+
     # Функция проверяет помещается ли корабль на конкретную позицию конкретного поля.
     # будем использовать при расстановке кораблей, а так же при вычислении веса клеток
     # возвращает False если не помещается и True если корабль помещается
@@ -362,11 +368,11 @@ class Player(object):
             return x, y
 
     # при совершении выстрела мы будем запрашивать ввод данных с типом shot
-    def make_shot(self, target_player,x,y):
+    def make_shot(self, target_player, x, y):
 
         if self.is_ai:
             x, y = choice(self.field.get_max_weight_cells())
-        sx, sy = x,y
+        sx, sy = x, y
 
         shot_res = target_player.receive_shot((sx, sy))
 
@@ -457,6 +463,7 @@ chatVariables = {}
 bot = telebot.TeleBot('6214557143:AAF9wrgPduSyDvYCJrmiaizbiahJwbDPem4')
 players = []
 
+
 @bot.message_handler(commands=['start'])
 def start(message):
     game = Game()
@@ -470,11 +477,10 @@ def start(message):
     bot.send_message(message.chat.id, hello_mess, parse_mode='html')
     bot.send_message(message.chat.id, enter_game_mess)
     markup = types.ReplyKeyboardMarkup()
-    #AI = types.KeyboardButton('Автоматически')
-    Player = types.KeyboardButton('Начать')
-    #markup.add(AI)
-    markup.add(Player)
-    bot.send_message(message.chat.id, 'Для продолжения игры выбери способ расстановки кораблей', parse_mode='html', reply_markup=markup)
+    Start = types.KeyboardButton('Начать')
+    markup.add(Start)
+    bot.send_message(message.chat.id, 'Для начала игры нажми "Начать"', parse_mode='html',
+                     reply_markup=markup)
 
 
 @bot.message_handler(content_types=['text'])
@@ -492,9 +498,10 @@ def get_user_text(message):
             current_game.add_player(Player(name='SkyNet', is_ai=True, auto_ship=True, skill=1))
             current_game.start_game()
             field, radar = current_game.draw()
-            bot.send_message(message.chat.id, field)
-            bot.send_message(message.chat.id, radar)
-        InputType.input_type = InputTypes.shot
+            markup = types.ReplyKeyboardRemove()
+            bot.send_message(message.chat.id, 'Ваш флот\n' + field, parse_mode='html', reply_markup=markup)
+            bot.send_message(message.chat.id, 'Радар\n' + radar)
+            InputType.input_type = InputTypes.shot
 
     elif InputType.input_type == InputTypes.shot:
         user_input = message.text.upper().replace(" ", "")
@@ -503,8 +510,8 @@ def get_user_text(message):
         if x not in Game.letters or not y.isdigit() or int(y) not in range(1, Game.field_size + 1):
             bot.send_message(message.chat.id, 'Приказ непонятен, ошибка формата данных')
         else:
-            y,x = Game.letters.index(x),int(y) - 1
-            shot_result = current_game.current_player.make_shot(current_game.next_player,x,y)
+            y, x = Game.letters.index(x), int(y) - 1
+            shot_result = current_game.current_player.make_shot(current_game.next_player, x, y)
             if shot_result == 'miss':
                 reply += 'Промах!\n'
                 bot.send_message(message.chat.id, reply)
@@ -512,24 +519,34 @@ def get_user_text(message):
                 shot_result = ''
                 while shot_result != 'miss':
                     bot.send_message(message.chat.id, 'Ход вашего соперника...')
-                    shot_result = current_game.current_player.make_shot(current_game.next_player,1,1)
+                    shot_result = current_game.current_player.make_shot(current_game.next_player, 1, 1)
                     if shot_result == 'miss':
-                        reply = current_game.current_player.name+' промахнулся!\n'
+                        reply = current_game.current_player.name + ' промахнулся!\n'
                     elif shot_result == 'get':
                         reply = 'Наш корабль попал под обстрел!'
                     elif shot_result == 'kill':
-                        reply = 'Плохие новости, наш корабль был уничтожен :('
+                        reply = 'Наш корабль был уничтожен!'
+                        if current_game.status == 'game over':
+                            reply = 'Наш последний корабль уничтожен!\n' + current_game.current_player.name + ' победил'
+                            bot.send_message(message.chat.id, reply)
+                            InputType.input_type = InputTypes.other
+                            break
                     bot.send_message(message.chat.id, reply)
+
                 current_game.switch_players()
                 reply = ''
             elif shot_result == 'get':
                 reply = 'Отличный выстрел, продолжайте!'
             elif shot_result == 'kill':
-                reply = 'Корабль противника уничтожен!\n Продолжайте огонь!'
+                reply = 'Корабль противника уничтожен!'
+                current_game.status_check()
+                if current_game.status == 'game over':
+                    reply = 'Это был последний\nОтличная работа, капитан!\n'+ current_game.next_player.name + ' повержен'
+                    InputType.input_type = InputTypes.other
         field, radar = current_game.draw()
         bot.send_message(message.chat.id, 'Ваш флот\n' + field)
         bot.send_message(message.chat.id, 'Радар\n' + radar)
-        if reply !='':
+        if reply != '':
             bot.send_message(message.chat.id, reply)
 
     elif InputType.input_type == InputTypes.ship_setup:
