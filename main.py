@@ -22,10 +22,6 @@ class InputTypes(object):
     waiting = 3
 
 
-class InputType:
-    input_type = InputTypes.other
-
-
 class Cell(object):
     empty_cell = emoji.emojize(':water_wave:')
     ship_cell = emoji.emojize(':passenger_ship:')
@@ -220,13 +216,13 @@ class Game(object):
     ships_rules = [1, 1, 1, 1, 2, 2, 2, 3, 3, 4]
     # ships_rules = [1, 2]
     field_size = len(letters)
-
+    input_type = InputTypes.other
     def __init__(self):
 
         self.players = []
         self.current_player = None
         self.next_player = None
-
+        self.input_type = InputTypes.other
         self.status = 'prepare'
 
     # при старте игры назначаем текущего и следующего игрока
@@ -254,56 +250,32 @@ class Game(object):
         player.enemy_ships = list(Game.ships_rules)
         # расставляем корабли
         self.ships_setup(player)
-        # высчитываем вес для клеток поля (это нужно только для ИИ, но в целом при расширении возможностей
-        # игры можно будет например на основе этого давать подсказки игроку).
+        # высчитываем вес для клеток поля (это нужно только для ИИ)
         player.field.recalculate_weight_map(player.enemy_ships)
         self.players.append(player)
 
     def ships_setup(self, player):
         # делаем расстановку кораблей по правилам заданным в классе Game
         for ship_size in Game.ships_rules:
-            # задаем количество попыток при выставлении кораблей случайным образом
-            # нужно для того чтобы не попасть в бесконечный цикл когда для последнего корабля остаётся очень мало места
+            # Задаем количество попыток, чтобы не попасть в бесконечный цикл когда для корабля остается очень мало места
             retry_count = 30
-
-            # создаем предварительно корабль-балванку просто нужного размера
-            # дальше будет видно что мы присваиваем ему координаты которые ввел пользователь
+            # Создаем предварительно корабль-болванку просто нужного размера
             ship = Ship(ship_size, 0, 0, True)
 
             while True:
-
-                if player.auto_ship_setup is not True:
-                    player.field.draw_field(FieldPart.main)
-                    player.message.append('Куда поставить {} корабль: '.format(ship_size))
-                    for _ in player.message:
-                        print(_)
-                else:
-                    pass
-
-                player.message.clear()
-
                 x, y, r = player.get_input('ship_setup')
-                # если пользователь ввёл какую-то ерунду функция возвратит нули, значит без вопросов делаем continue
-                # фактически просто просим еще раз ввести координаты
-                if x + y + r == 0:
-                    continue
-
                 ship.set_position(x, y, r)
 
-                # если корабль помещается на заданной позиции - отлично. добавляем игроку на поле корабль
-                # также добавляем корабль в список кораблей игрока. и переходим к следующему кораблю для расстановки
+                # если корабль помещается на заданной позиции - добавляем игроку на поле и в список корабль
                 if player.field.check_ship_fits(ship, FieldPart.main):
                     player.field.add_ship_to_field(ship, FieldPart.main)
                     player.ships.append(ship)
                     break
 
-                # сюда мы добираемся только если корабль не поместился. пишем юзеру что позиция неправильная
-                # и отнимаем попытку на расстановку
-                player.message.append('Неправильная позиция!')
+                # Если корабль не поместился. пишем, отнимаем попытку на расстановку
                 retry_count -= 1
                 if retry_count < 0:
                     # после заданного количества неудачных попыток - обнуляем карту игрока
-                    # убираем у него все корабли и начинаем расстановку по новой
                     player.field.map = [[Cell.empty_cell for _ in range(Game.field_size)] for _ in
                                         range(Game.field_size)]
                     player.ships = []
@@ -341,10 +313,7 @@ class Player(object):
             if self.is_ai or self.auto_ship_setup:
                 user_input = str(choice(Game.letters)) + str(randrange(0, self.field.size)) + choice(["H", "V"])
             else:
-                user_input = input().upper().replace(" ", "")
-
-            if len(user_input) < 3:
-                return 0, 0, 0
+                pass
 
             x, y, r = user_input[0], user_input[1:-1], user_input[-1]
 
@@ -353,7 +322,7 @@ class Player(object):
                 self.message.append('Приказ непонятен, повторите')
                 return 0, 0, 0
 
-            return Game.letters.index(x), int(y) - 1, 0 if r == 'H' else 1
+            return Game.letters.index(x), int(y) - 1, False if r == 'H' else True
 
         if input_type == "shot":
 
@@ -363,13 +332,7 @@ class Player(object):
                 if self.skill == 0:
                     x, y = randrange(0, self.field.size), randrange(0, self.field.size)
             else:
-                user_input = input().upper().replace(" ", "")
-                x, y = user_input[0].upper(), user_input[1:]
-                if x not in Game.letters or not y.isdigit() or int(y) not in range(1, Game.field_size + 1):
-                    self.message.append('Приказ непонятен, ошибка формата данных')
-                    return 500, 0
-                x = Game.letters.index(x)
-                y = int(y) - 1
+                pass
             return x, y
 
     # при совершении выстрела мы будем запрашивать ввод данных с типом shot
@@ -426,7 +389,6 @@ class Player(object):
 class Ship:
 
     def __init__(self, size, x, y, is_vert):
-
         self.size = size
         self.hp = size
         self.x = x
@@ -484,7 +446,7 @@ def get_user_text(message):
         bot.send_message(message.chat.id, "Вас нет в базе данных!\nНажмите /start чтобы исправить")
         return
     current_game = chatVariables[message.chat.id]
-    if InputType.input_type == InputTypes.other:
+    if current_game.input_type == InputTypes.other:
         if message.text == 'Автоматически':
             pass
         elif message.text == 'Вручную':
@@ -499,12 +461,12 @@ def get_user_text(message):
             markup = types.ReplyKeyboardRemove()
             bot.send_message(message.chat.id, 'Ваш флот\n' + field, parse_mode='html', reply_markup=markup)
             bot.send_message(message.chat.id, 'Радар\n' + radar)
-            InputType.input_type = InputTypes.shot
+            current_game.input_type = InputTypes.shot
         elif message.text == 'Помощь':
             help_mes = 'Когда собираешься ввести координату выстрела, используй следующий формат: A1 (Заглавная английская буква от A до J + число от 1 до 10)'
             bot.send_message(message.chat.id, help_mes)
 
-    elif InputType.input_type == InputTypes.shot:
+    elif current_game.input_type == InputTypes.shot:
         user_input = message.text.upper().replace(" ", "")
         x, y = user_input[0].upper(), user_input[1:]
         reply = ''
@@ -530,7 +492,7 @@ def get_user_text(message):
                         if current_game.status == 'game over':
                             reply = 'Наш последний корабль уничтожен!\n' + current_game.current_player.name + ' победил'
                             bot.send_message(message.chat.id, reply)
-                            InputType.input_type = InputTypes.other
+                            current_game.input_type = InputTypes.other
                             break
                     bot.send_message(message.chat.id, reply)
 
@@ -543,17 +505,17 @@ def get_user_text(message):
                 current_game.status_check()
                 if current_game.status == 'game over':
                     reply = 'Это был последний\nОтличная работа, капитан!\n' + current_game.next_player.name + ' повержен'
-                    InputType.input_type = InputTypes.other
+                    current_game.input_type = InputTypes.other
         field, radar = current_game.draw()
         bot.send_message(message.chat.id, 'Ваш флот\n' + field)
         bot.send_message(message.chat.id, 'Радар\n' + radar)
         if reply != '':
             bot.send_message(message.chat.id, reply)
 
-    elif InputType.input_type == InputTypes.ship_setup:
+    elif current_game.input_type == InputTypes.ship_setup:
         pass
 
-    elif InputType.input_type == InputTypes.waiting:
+    elif current_game.input_type == InputTypes.waiting:
         reply = "Ожидайте своей очереди"
         bot.send_message(message.chat.id, reply)
 
