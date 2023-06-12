@@ -25,12 +25,6 @@ class InputTypes(object):
 class InputType:
     input_type = InputTypes.other
 
-    def get_input_type(self):
-        return self.input_type
-
-    def set_input_type(self, type):
-        self.input_type = type
-
 
 class Cell(object):
     empty_cell = emoji.emojize(':water_wave:')
@@ -61,9 +55,12 @@ class Field(object):
 
     # Рисуем поле. Здесь отрисовка делитcя на две части. т.к. отрисовка весов клеток идёт по другому
     def draw_field(self, element):
-        reply = ''
         field = self.get_field_part(element)
-        field_message = emoji.emojize(':triangular_flag:') + "  🄰   🄱   🄲   🄳   🄴   🄵   🄶   🄷   🄸   🄹" + '\n'
+        # Выбор варианта отображения букв
+        #letters = "  🄰  🄱  🄲  🄳  🄴  🄵  🄶  🄷  🄸  🄹"
+        letters = '\U0001f1e6 ' + '\U0001f1e7 ' + '\U0001f1e8 ' + '\U0001f1e9 ' + '\U0001f1eA ' + '\U0001f1eB ' + '\U0001f1eC ' + '\U0001f1eD ' + '\U0001f1eE ' + '\U0001f1eF '
+
+        field_message = emoji.emojize(':triangular_flag:') + letters[0:self.size * 2] + '\n'
         for x in range(0, self.size):
             field_message += emoji.emojize(':keycap_' + str(x + 1) + ':')
             for y in range(0, self.size):
@@ -196,7 +193,8 @@ class Field(object):
 
         for ship_size in available_ships:
 
-            ship = Ship(ship_size, 1, 1, 0)
+            ship_vert = Ship(ship_size, 1, 1, True)
+            ship_horz = Ship(ship_size, 1, 1, False)
             # вот тут бегаем по всем клеткам поля
             for x in range(self.size):
                 for y in range(self.size):
@@ -205,15 +203,22 @@ class Field(object):
                         self.weight[x][y] = 0
                         continue
                     # вот здесь ворочаем корабль и проверяем помещается ли он
-                    for rotation in range(0, 4):
-                        ship.set_position(x, y, rotation)
-                        if self.check_ship_fits(ship, FieldPart.radar):
-                            self.weight[x][y] += 1
+                    ship_vert.set_position(x, y, True)
+                    ship_horz.set_position(x, y, False)
+                    if self.check_ship_fits(ship_vert, FieldPart.radar):
+                        for i in range(ship_size):
+                            self.weight[x + i][y] += 1
+                    if self.check_ship_fits(ship_horz, FieldPart.radar):
+                        for i in range(ship_size):
+                            self.weight[x][y + i] += 1
+                            self.weight[x][y + i] += 1
 
 
 class Game(object):
     letters = ("A", "B", "C", "D", "E", "F", "G", "H", "I", "J")
+    # letters = ("A", "B", "C", "D")
     ships_rules = [1, 1, 1, 1, 2, 2, 2, 3, 3, 4]
+    # ships_rules = [1, 2]
     field_size = len(letters)
 
     def __init__(self):
@@ -263,7 +268,7 @@ class Game(object):
 
             # создаем предварительно корабль-балванку просто нужного размера
             # дальше будет видно что мы присваиваем ему координаты которые ввел пользователь
-            ship = Ship(ship_size, 0, 0, 0)
+            ship = Ship(ship_size, 0, 0, True)
 
             while True:
 
@@ -420,41 +425,28 @@ class Player(object):
 
 class Ship:
 
-    def __init__(self, size, x, y, rotation):
+    def __init__(self, size, x, y, is_vert):
 
         self.size = size
         self.hp = size
         self.x = x
         self.y = y
-        self.rotation = rotation
-        self.set_rotation(rotation)
+        self.is_vert = is_vert
+        self.set_rotation(is_vert)
 
     def __str__(self):
         return Cell.ship_cell
 
-    def set_position(self, x, y, r):
+    def set_position(self, x, y, is_vert):
         self.x = x
         self.y = y
-        self.set_rotation(r)
+        self.set_rotation(is_vert)
 
-    def set_rotation(self, r):
-
-        self.rotation = r
-
-        if self.rotation == 0:
-            self.width = self.size
-            self.height = 1
-        elif self.rotation == 1:
-            self.width = 1
-            self.height = self.size
-        elif self.rotation == 2:
-            self.y = self.y - self.size + 1
-            self.width = self.size
-            self.height = 1
-        elif self.rotation == 3:
-            self.x = self.x - self.size + 1
-            self.width = 1
-            self.height = self.size
+    def set_rotation(self, is_vert):
+        if is_vert:
+            self.height, self.width = self.size, 1
+        else:
+            self.height, self.width = 1, self.size
 
 
 # Здесь мы начинаем создавать нашего телеграм бота
@@ -481,8 +473,10 @@ def start(message):
     Start = types.KeyboardButton('Начать')
     Help = types.KeyboardButton('Помощь')
     markup.add(Start, Help)
-    bot.send_message(message.chat.id, 'Для начала игры нажми "Начать", а для ознакомления с правилами ввода - "Помощь"', parse_mode='html',
+    bot.send_message(message.chat.id, 'Для начала игры нажми "Начать", а для ознакомления с правилами ввода - "Помощь"',
+                     parse_mode='html',
                      reply_markup=markup)
+
 
 @bot.message_handler(content_types=['text'])
 def get_user_text(message):
@@ -548,7 +542,7 @@ def get_user_text(message):
                 reply = 'Корабль противника уничтожен!'
                 current_game.status_check()
                 if current_game.status == 'game over':
-                    reply = 'Это был последний\nОтличная работа, капитан!\n'+ current_game.next_player.name + ' повержен'
+                    reply = 'Это был последний\nОтличная работа, капитан!\n' + current_game.next_player.name + ' повержен'
                     InputType.input_type = InputTypes.other
         field, radar = current_game.draw()
         bot.send_message(message.chat.id, 'Ваш флот\n' + field)
