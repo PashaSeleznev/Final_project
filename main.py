@@ -212,9 +212,9 @@ class Field(object):
 
 class Game(object):
     letters = ("A", "B", "C", "D", "E", "F", "G", "H", "I", "J")
-    # letters = ("A", "B", "C", "D")
+    letters = ("A", "B", "C", "D")
     ships_rules = [1, 1, 1, 1, 2, 2, 2, 3, 3, 4]
-    # ships_rules = [1, 2]
+    ships_rules = [1,2]
     field_size = len(letters)
     input_type = InputTypes.other
     def __init__(self):
@@ -454,9 +454,11 @@ def get_user_text(message):
         elif message.text == 'Завершить':
             pass
         elif message.text == 'Начать':
+            current_game = Game()
+            chatVariables[message.chat.id] = current_game
             current_game.add_player(Player(name=message.from_user.first_name, is_ai=False, auto_ship=True, skill=1))
             current_game.add_player(Player(name='SkyNet', is_ai=True, auto_ship=True, skill=1))
-            current_game.start_game()
+            current_game.status_check()
             field, radar = current_game.draw()
             markup = types.ReplyKeyboardRemove()
             bot.send_message(message.chat.id, 'Ваш флот\n' + field, parse_mode='html', reply_markup=markup)
@@ -469,49 +471,49 @@ def get_user_text(message):
     elif current_game.input_type == InputTypes.shot:
         user_input = message.text.upper().replace(" ", "")
         x, y = user_input[0].upper(), user_input[1:]
-        reply = ''
+        current_game.input_type = InputTypes.waiting
         if x not in Game.letters or not y.isdigit() or int(y) not in range(1, Game.field_size + 1):
             bot.send_message(message.chat.id, 'Приказ непонятен, ошибка формата данных')
         else:
             y, x = Game.letters.index(x), int(y) - 1
             shot_result = current_game.current_player.make_shot(current_game.next_player, x, y)
             if shot_result == 'miss':
-                reply += 'Промах!\n'
-                bot.send_message(message.chat.id, reply)
+                bot.send_message(message.chat.id, 'Промах!')
                 current_game.switch_players()
                 shot_result = ''
                 while shot_result != 'miss':
                     bot.send_message(message.chat.id, 'Ход вашего соперника...')
                     shot_result = current_game.current_player.make_shot(current_game.next_player, 1, 1)
                     if shot_result == 'miss':
-                        reply = current_game.current_player.name + ' промахнулся!\n'
+                        bot.send_message(message.chat.id, current_game.current_player.name + ' промахнулся!')
                     elif shot_result == 'get':
-                        reply = 'Наш корабль попал под обстрел!'
+                        bot.send_message(message.chat.id, 'Наш корабль попал под обстрел!')
                     elif shot_result == 'kill':
-                        reply = 'Наш корабль был уничтожен!'
+                        bot.send_message(message.chat.id, 'Наш корабль был уничтожен!')
+                        current_game.status_check()
                         if current_game.status == 'game over':
-                            reply = 'Наш последний корабль уничтожен!\n' + current_game.current_player.name + ' победил'
+                            reply = 'Это был наш последний корабль!\n' + current_game.current_player.name + ' победил'
                             bot.send_message(message.chat.id, reply)
-                            current_game.input_type = InputTypes.other
-                            break
-                    bot.send_message(message.chat.id, reply)
-
+                            shot_result = 'miss'
                 current_game.switch_players()
-                reply = ''
             elif shot_result == 'get':
-                reply = 'Отличный выстрел, продолжайте!'
+                bot.send_message(message.chat.id, 'Отличный выстрел, продолжайте!')
             elif shot_result == 'kill':
-                reply = 'Корабль противника уничтожен!'
+                bot.send_message(message.chat.id, 'Корабль противника уничтожен!')
                 current_game.status_check()
                 if current_game.status == 'game over':
-                    reply = 'Это был последний\nОтличная работа, капитан!\n' + current_game.next_player.name + ' повержен'
-                    current_game.input_type = InputTypes.other
+                    bot.send_message(message.chat.id, 'Это был последний\nОтличная работа, капитан!\n' + current_game.next_player.name + ' повержен')
         field, radar = current_game.draw()
         bot.send_message(message.chat.id, 'Ваш флот\n' + field)
         bot.send_message(message.chat.id, 'Радар\n' + radar)
-        if reply != '':
-            bot.send_message(message.chat.id, reply)
-
+        if current_game.status == 'game over':
+            current_game.input_type = InputTypes.other
+            markup = types.ReplyKeyboardMarkup()
+            Retry = types.KeyboardButton('Начать')
+            markup.add(Retry)
+            bot.send_message(message.chat.id, 'Спасибо за игру!\nЕсли хотите продолжить, нажмите "Начать"' , parse_mode='html', reply_markup=markup)
+        else:
+            current_game.input_type = InputTypes.shot
     elif current_game.input_type == InputTypes.ship_setup:
         pass
 
