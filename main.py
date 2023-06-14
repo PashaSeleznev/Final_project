@@ -446,7 +446,9 @@ def get_user_text(message):
             x, y = user_input[0].upper(), user_input[1:]
             current_game.input_type = InputTypes.waiting
             if x not in Game.letters or not y.isdigit() or int(y) not in range(1, Game.field_size + 1):
-                bot.send_message(message.chat.id, 'Приказ непонятен, повторите')
+                bot.send_message(message.chat.id, 'Приказ непонятен, повторите!')
+            elif current_game.current_player.field.get_field_part(FieldPart.radar)[int(y) - 1][Game.letters.index(x)] != Cell.empty_cell:
+                bot.send_message(message.chat.id, 'Квадрат уже обстрелян, повторите!')
             else:
                 y, x = Game.letters.index(x), int(y) - 1
                 shot_result = current_game.current_player.make_shot(current_game.next_player, x, y)
