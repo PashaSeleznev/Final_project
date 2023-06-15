@@ -1,8 +1,7 @@
 import telebot
 from telebot import types
 import emoji
-from random import randrange
-from random import choice
+from random import randrange, choice
 
 
 class FieldPart(object):
@@ -28,7 +27,7 @@ class Cell(object):
 
 # Поле игры состоит из трех частей: карта, где расставлены корабли игрока;
 # радар, на котором игрок отмечает свои ходы и результаты выстрелов;
-# поле с весом клеток (используется для ходов ИИ)
+# поле с весом клеток (используется для ходов компьютера)
 class Field(object):
 
     def __init__(self, size):
@@ -49,7 +48,7 @@ class Field(object):
     def draw_field(self, element):
         field = self.get_field_part(element)
         # Выбор варианта отображения букв
-        #letters = "  🄰  🄱  🄲  🄳  🄴  🄵  🄶  🄷  🄸  🄹"
+        # letters = "  🄰  🄱  🄲  🄳  🄴  🄵  🄶  🄷  🄸  🄹"
         letters = '\U0001f1e6 ' + '\U0001f1e7 ' + '\U0001f1e8 ' + '\U0001f1e9 ' + '\U0001f1eA ' + \
                   '\U0001f1eB ' + '\U0001f1eC ' + '\U0001f1eD ' + '\U0001f1eE ' + '\U0001f1eF '
 
@@ -144,7 +143,7 @@ class Field(object):
         self.weight = [[1 for _ in range(self.size)] for _ in range(self.size)]
 
         # Если находим раненый корабль - ставим клеткам выше ниже и по бокам
-        # коэффициенты умноженные на 50. По диагоналям от раненой клетки вписываем нули
+        # коэффициенты, умноженные на 50. По диагоналям от раненой клетки вписываем нули
         for x in range(self.size):
             for y in range(self.size):
                 if self.radar[x][y] == Cell.damaged_ship:
@@ -286,11 +285,10 @@ class Player(object):
         self.enemy_ships = []
         self.field = None
 
-    # Получение ответа от ИИ
+    # Получение ответа от компьютера
     def get_input(self, input_type):
 
         if input_type == "ship_setup":
-
             user_input = str(choice(Game.letters)) + str(randrange(0, self.field.size)) + choice(["H", "V"])
             x, y, r = user_input[0], user_input[1:-1], user_input[-1]
 
@@ -304,7 +302,8 @@ class Player(object):
                     x, y = randrange(0, self.field.size), randrange(0, self.field.size)
             else:
                 pass
-            return x, y
+            return \
+                x, y
 
     # При совершении выстрела мы будем запрашивать ввод данных с типом shot
     def make_shot(self, target_player, x, y):
@@ -404,8 +403,9 @@ def start(message):
     Start = types.KeyboardButton('Начать')
     Help = types.KeyboardButton('Помощь')
     markup.add(Start, Help)
-    bot.send_message(message.chat.id, 'Для начала игры нажми "Начать", а для ознакомления с правилами ввода - "Помощь"\n'
-                                      'Для выхода из игры введи "Завершить"',
+    bot.send_message(message.chat.id,
+                     'Для начала игры нажми "Начать", а для ознакомления с правилами ввода - "Помощь"\n'
+                     'Для выхода из игры введи "Завершить"',
                      parse_mode='html',
                      reply_markup=markup)
 
@@ -413,14 +413,16 @@ def start(message):
 @bot.message_handler(content_types=['text'])
 def get_user_text(message):
     if message.chat.id not in chatVariables.keys():
-        bot.send_message(message.chat.id, "Вас нет в базе данных!\nНажмите /start чтобы исправить")
+        bot.send_message(message.chat.id, "Вас нет в базе данных!\nНажмите /start, чтобы исправить")
         return
     elif message.text == 'Помощь':
         help_mes = 'Цель игры - "потопить" все вражеские корабли\n' \
-                   'Игровое поле представляет собой квадрат 10x10, столбцы обозначены латинскими заглавными буквами, а строки - числами.\n' \
-                   'На игровом поле хаотично расположены корабли: 4 однопалубных, 3 двухпалубных, 2 трехпалубных и 1 четырехпалубный ' \
-                   '(расстановка происходит автоматически). Корабли не могут поворачивать.\n' \
-                   'Когда собираешься ввести координату выстрела, используй следующий формат: [A-J,1-10] (Заглавная латинская буква от A до J + число от 1 до 10).'
+                   'Игровое поле представляет собой квадрат 10x10, столбцы обозначены латинскими заглавными буквами, ' \
+                   'а строки - числами.\n' \
+                   'На игровом поле хаотично расположены корабли: 4 однопалубных, 3 двухпалубных, 2 трехпалубных и 1 ' \
+                   'четырехпалубный (расстановка происходит автоматически). \n' \
+                   'Когда собираешься ввести координату выстрела, используй следующий формат: заглавная латинская ' \
+                   'буква от A до J + число от 1 до 10, например, A2 или C4. '
         bot.send_message(message.chat.id, help_mes)
         return
     current_game = chatVariables[message.chat.id]
@@ -447,7 +449,8 @@ def get_user_text(message):
             current_game.input_type = InputTypes.waiting
             if x not in Game.letters or not y.isdigit() or int(y) not in range(1, Game.field_size + 1):
                 bot.send_message(message.chat.id, 'Приказ непонятен, повторите!')
-            elif current_game.current_player.field.get_field_part(FieldPart.radar)[int(y) - 1][Game.letters.index(x)] != Cell.empty_cell:
+            elif current_game.current_player.field.get_field_part(FieldPart.radar)[int(y) - 1][
+                Game.letters.index(x)] != Cell.empty_cell:
                 bot.send_message(message.chat.id, 'Квадрат уже обстрелян, повторите!')
             else:
                 y, x = Game.letters.index(x), int(y) - 1
@@ -477,7 +480,8 @@ def get_user_text(message):
                     bot.send_message(message.chat.id, 'Корабль противника уничтожен!')
                     current_game.status_check()
                     if current_game.status == 'game over':
-                        bot.send_message(message.chat.id, 'Это был последний\nОтличная работа, капитан!\n' + current_game.next_player.name + ' повержен')
+                        bot.send_message(message.chat.id,
+                                         'Это был последний\nОтличная работа, капитан!\n' + current_game.next_player.name + ' повержен')
             field, radar = current_game.draw()
             bot.send_message(message.chat.id, 'Ваш флот\n' + field)
             bot.send_message(message.chat.id, 'Радар\n' + radar)
@@ -486,7 +490,8 @@ def get_user_text(message):
             markup = types.ReplyKeyboardMarkup()
             retry = types.KeyboardButton('Начать')
             markup.add(retry)
-            bot.send_message(message.chat.id, 'Спасибо за игру!\nЕсли хотите продолжить, нажмите "Начать"' , parse_mode='html', reply_markup=markup)
+            bot.send_message(message.chat.id, 'Спасибо за игру!\nЕсли хотите продолжить, нажмите "Начать"',
+                             parse_mode='html', reply_markup=markup)
         else:
             current_game.input_type = InputTypes.shot
     elif current_game.input_type == InputTypes.ship_setup:
