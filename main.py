@@ -422,6 +422,7 @@ def get_user_text(message):
                    '(расстановка происходит автоматически). Корабли не могут поворачивать.\n' \
                    'Когда собираешься ввести координату выстрела, используй следующий формат: [A-J,1-10] (Заглавная латинская буква от A до J + число от 1 до 10).'
         bot.send_message(message.chat.id, help_mes)
+        return
     current_game = chatVariables[message.chat.id]
     if current_game.input_type == InputTypes.other:
         if message.text == 'Начать':
@@ -435,7 +436,6 @@ def get_user_text(message):
             bot.send_message(message.chat.id, 'Ваш флот\n' + field, parse_mode='html', reply_markup=markup)
             bot.send_message(message.chat.id, 'Радар\n' + radar)
             current_game.input_type = InputTypes.shot
-
     elif current_game.input_type == InputTypes.shot:
         current_game.input_type = InputTypes.waiting
         if message.text == 'Завершить':
